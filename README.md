@@ -6,11 +6,49 @@ This is to design a path planner that is able to create smooth, safe paths for t
 
 The goal of the project is to control the speed, lane, collision of the car in a simulated environment given the waypoints, telemetry and sensor fusion data on the circuit. The car should run with a controlled velocity, acceleration and jerk.
 
-## Implmentation
+## Implementation
 
+### Waypoints interpolation
+The waypoints_map.csv is used to roughly map the waypoints at a equi-distance of 30m. In the code, currently 5 waypoints ahead and behind the vehicle has been interpolated to have tightly spaced waypoints inorder to get accurate results from getXY and getFrenet global and cartesian coordinates conversions respectively.
 
+### Ego Car Parameter Calculation
+As the Vehicle class requires requires s,s_d,s_dd,d,d_d,d_dd - in that order, From the previous path, the code calculates other values needed for determining the future points.Use default values if not enough previous path points are there. The vehicle state and related methods are there in Vehicle class. 
+
+### Generate Predictions from Sensor Fusion Data
+The data format for each car is: [ id, x, y, vx, vy, s, d]. The id is a unique identifier for that car. The x, y values are in global map coordinates, and the vx, vy values are the velocity components, also in reference to the global map. Finally s and d are the Frenet coordinates for that car.
+
+```
+					double duration = N_SAMPLES * DT - subpath_size * PATH_DT;
+					vector<Vehicle> other_cars;
+					map<int, vector<vector<double>>> predictions;
+					for (auto sf: sensor_fusion) {
+						double other_car_vel = sqrt(pow((double)sf[3], 2) + pow((double)sf[4], 2));
+						Vehicle other_car = Vehicle(sf[5], other_car_vel, 0, sf[6], 0, 0);
+						other_cars.push_back(other_car);
+						int v_id = sf[0];
+						vector<vector<double>> preds = other_car.generate_predictions(traj_start_time, duration);
+						predictions[v_id] = preds;
+					}
+```
+
+### Jerk Minimising Trajectory
+The code considered Collision cost, buffer cost, in-lane buffer, efficiency cost, not-middle lane cost to penelise all the predicted trajectories and finalise on one to navigate the car
+
+```
+  double total_cost = 0;
+  double col = collision_cost(s_traj, d_traj, predictions) * COLLISION_COST_WEIGHT;
+  double buf = buffer_cost(s_traj, d_traj, predictions) * BUFFER_COST_WEIGHT;
+  double ilb = in_lane_buffer_cost(s_traj, d_traj, predictions) * IN_LANE_BUFFER_COST_WEIGHT;
+  double eff = efficiency_cost(s_traj) * EFFICIENCY_COST_WEIGHT;
+  double nml = not_middle_lane_cost(d_traj) * NOT_MIDDLE_LANE_COST_WEIGHT;
+  total_cost += col + buf + ilb + eff + nml;// + esl + mas + aas + mad + aad + mjs + ajs + mjd + ajd;
+  return total_cost;
+```
 
 ## Conclusion
+Attached the screen where you can see the car was able to run without collision for 8.04 miles.
+
+![8.04 miles](./DistanceWithoutAccident.png)
 
 ---
 
