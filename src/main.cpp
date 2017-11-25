@@ -389,7 +389,63 @@ int main() {
 					if (car_just_ahead) cout << "CAR JUST AHEAD!!!" << endl;
 
 
+					// ******************************* DETERMINE BEST TRAJECTORY ***********************************
+					// where the magic happens? NOPE! I WISH - THIS APPORACH HAS BEEN ABANDONED
+					// trajectories come back in a list of s values and a list of d values (not zipped together)
+					// duration for trajectory is variable, depending on number of previous points used
+					// vector<vector<double>> frenet_traj = my_car.get_best_frenet_trajectory(predictions, duration);
+					// vector<double> traj_xy_point, best_x_traj, best_y_traj, interpolated_x_traj, interpolated_y_traj;
 
+					my_car.update_available_states(car_to_left, car_to_right);
+
+					vector<vector<double>> best_frenet_traj, best_target;
+					double best_cost = 999999;
+					string best_traj_state = "";
+					for (string state: my_car.available_states) {
+        				vector<vector<double>> target_s_and_d = my_car.get_target_for_state(state, predictions, duration, car_just_ahead);
+
+
+						vector<vector<double>> possible_traj = my_car.generate_traj_for_target(target_s_and_d, duration);
+
+						double current_cost = calculate_total_cost(possible_traj[0], possible_traj[1], predictions);
+
+						if (current_cost < best_cost) {
+								best_cost = current_cost;
+								best_frenet_traj = possible_traj;
+								best_traj_state = state;
+								best_target = target_s_and_d;
+						}
+					}
+
+					// ********************* PRODUCE NEW PATH ***********************
+					// begin by pushing the last and next-to-last point from the previous path for setting the
+					// spline the last point should be the first point in the returned trajectory, but because of
+					// imprecision, also add that point manually
+
+					vector<double> coarse_s_traj, coarse_x_traj, coarse_y_traj, interpolated_s_traj,
+												 interpolated_x_traj, interpolated_y_traj;
+
+					double prev_s = pos_s - s_dot * PATH_DT;
+
+					// first two points of coarse trajectory, to ensure spline begins smoothly
+					if (subpath_size >= 2) {
+						coarse_s_traj.push_back(prev_s);
+						coarse_x_traj.push_back(previous_path_x[subpath_size-2]);
+						coarse_y_traj.push_back(previous_path_y[subpath_size-2]);
+						coarse_s_traj.push_back(pos_s);
+						coarse_x_traj.push_back(previous_path_x[subpath_size-1]);
+						coarse_y_traj.push_back(previous_path_y[subpath_size-1]);
+					} else {
+						double prev_s = pos_s - 1;
+						double prev_x = pos_x - cos(angle);
+						double prev_y = pos_y - sin(angle);
+						coarse_s_traj.push_back(prev_s);
+						coarse_x_traj.push_back(prev_x);
+						coarse_y_traj.push_back(prev_y);
+						coarse_s_traj.push_back(pos_s);
+						coarse_x_traj.push_back(pos_x);
+						coarse_y_traj.push_back(pos_y);
+					}
 
 					// last two points of coarse trajectory, use target_d and current s + 30,60
 					double target_s1 = pos_s + 30;
