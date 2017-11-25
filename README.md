@@ -18,17 +18,17 @@ As the Vehicle class requires requires s,s_d,s_dd,d,d_d,d_dd - in that order, Fr
 The data format for each car is: [ id, x, y, vx, vy, s, d]. The id is a unique identifier for that car. The x, y values are in global map coordinates, and the vx, vy values are the velocity components, also in reference to the global map. Finally s and d are the Frenet coordinates for that car.
 
 ```
-					double duration = N_SAMPLES * DT - subpath_size * PATH_DT;
-					vector<Vehicle> other_cars;
-					map<int, vector<vector<double>>> predictions;
-					for (auto sf: sensor_fusion) {
-						double other_car_vel = sqrt(pow((double)sf[3], 2) + pow((double)sf[4], 2));
-						Vehicle other_car = Vehicle(sf[5], other_car_vel, 0, sf[6], 0, 0);
-						other_cars.push_back(other_car);
-						int v_id = sf[0];
-						vector<vector<double>> preds = other_car.generate_predictions(traj_start_time, duration);
-						predictions[v_id] = preds;
-					}
+  double duration = N_SAMPLES * DT - subpath_size * PATH_DT;
+  vector<Vehicle> other_cars;
+  map<int, vector<vector<double>>> predictions;
+  for (auto sf: sensor_fusion) {
+    double other_car_vel = sqrt(pow((double)sf[3], 2) + pow((double)sf[4], 2));
+    Vehicle other_car = Vehicle(sf[5], other_car_vel, 0, sf[6], 0, 0);
+    other_cars.push_back(other_car);
+    int v_id = sf[0];
+    vector<vector<double>> preds = other_car.generate_predictions(traj_start_time, duration);
+    predictions[v_id] = preds;
+  }
 ```
 
 ### Jerk Minimising Trajectory
@@ -48,7 +48,7 @@ The code considered Collision cost, buffer cost, in-lane buffer, efficiency cost
 ## Conclusion
 Attached the screen where you can see the car was able to run without collision for 8.04 miles.
 
-![8.04 miles](./DistanceWithoutAccident.png)
+![8.04 miles](./DistanceWithoutAccident)
 
 ---
 
