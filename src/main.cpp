@@ -350,7 +350,38 @@ int main() {
 					// cout << "planning state (s,s_d,s_dd),(d,d_d,d_dd): (" << pos_s << ", " << s_dot << ", " << s_ddot;
 					// cout << ") (" << pos_d << ", " << d_dot << ", " << d_ddot << ")" << endl << endl;
 
+					// ********************* GENERATE PREDICTIONS FROM SENSOR FUSION DATA **************************
+					// The data format for each car is: [ id, x, y, vx, vy, s, d]. The id is a unique identifier for that car. The x, y values are in global map coordinates, and the vx, vy values are the velocity components, also in reference to the global map. Finally s and d are the Frenet coordinates for that car.
+					double duration = N_SAMPLES * DT - subpath_size * PATH_DT;
+					vector<Vehicle> other_cars;
+					map<int, vector<vector<double>>> predictions;
+					for (auto sf: sensor_fusion) {
+						double other_car_vel = sqrt(pow((double)sf[3], 2) + pow((double)sf[4], 2));
+						Vehicle other_car = Vehicle(sf[5], other_car_vel, 0, sf[6], 0, 0);
+						other_cars.push_back(other_car);
+						int v_id = sf[0];
+						vector<vector<double>> preds = other_car.generate_predictions(traj_start_time, duration);
+						predictions[v_id] = preds;
+					}
 
+					// Add a little ADAS-like warning system - if any other car is immediately to left or right, set a
+					// flag to be used for hard limiting available states (i.e. if there is a car to the left, prevent
+					// Lane Change Left as an available state)
+					bool car_to_left = false, car_to_right = false, car_just_ahead = false;
+					for (Vehicle other_car: other_cars) {
+						double s_diff = fabs(other_car.s - car_s);
+						if (s_diff < FOLLOW_DISTANCE) {
+							cout << "s diff: " << s_diff << endl;
+							double d_diff = other_car.d - car_d;
+							if (d_diff > 2 && d_diff < 6) {
+								car_to_right = true;
+							} else if (d_diff < -2 && d_diff > -6) {
+								car_to_left = true;
+							} else if (d_diff > -2 && d_diff < 2) {
+								car_just_ahead = true;
+							}
+						}
+					}
 
 					// DEBUG
 					if (car_to_right) cout << "CAR ON THE RIGHT!!!" << endl;
@@ -358,40 +389,25 @@ int main() {
 					if (car_just_ahead) cout << "CAR JUST AHEAD!!!" << endl;
 
 
-					// ******************************* DETERMINE BEST TRAJECTORY ***********************************
-					// where the magic happens? NOPE! I WISH - THIS APPORACH HAS BEEN ABANDONED
-					// trajectories come back in a list of s values and a list of d values (not zipped together)
-					// duration for trajectory is variable, depending on number of previous points used
-					// vector<vector<double>> frenet_traj = my_car.get_best_frenet_trajectory(predictions, duration);
-					// vector<double> traj_xy_point, best_x_traj, best_y_traj, interpolated_x_traj, interpolated_y_traj;
-
-					my_car.update_available_states(car_to_left, car_to_right);
-
-					vector<vector<double>> best_frenet_traj, best_target;
-					double best_cost = 999999;
-					string best_traj_state = "";
-					for (string state: my_car.available_states) {
-        				vector<vector<double>> target_s_and_d = my_car.get_target_for_state(state, predictions, duration, car_just_ahead);
 
 
-						vector<vector<double>> possible_traj = my_car.generate_traj_for_target(target_s_and_d, duration);
-
-						double current_cost = calculate_total_cost(possible_traj[0], possible_traj[1], predictions);
-
-						if (current_cost < best_cost) {
-								best_cost = current_cost;
-								best_frenet_traj = possible_traj;
-								best_traj_state = state;
-								best_target = target_s_and_d;
-						}
-					}
-
-					// ********************* PRODUCE NEW PATH ***********************
-					// begin by pushing the last and next-to-last point from the previous path for setting the
-					// spline the last point should be the first point in the returned trajectory, but because of
-					// imprecision, also add that point manually
-
-
+					// last two points of coarse trajectory, use target_d and current s + 30,60
+					double target_s1 = pos_s + 30;
+					double target_d1 = best_target[1][0];
+					vector<double> target_xy1 = getXY(target_s1, target_d1, interpolated_waypoints_s, interpolated_waypoints_x, interpolated_waypoints_y);
+					double target_x1 = target_xy1[0];
+					double target_y1 = target_xy1[1];
+					coarse_s_traj.push_back(target_s1);
+					coarse_x_traj.push_back(target_x1);
+					coarse_y_traj.push_back(target_y1);
+					double target_s2 = target_s1 + 30;
+					double target_d2 = target_d1;
+					vector<double> target_xy2 = getXY(target_s2, target_d2, interpolated_waypoints_s, interpolated_waypoints_x, interpolated_waypoints_y);
+					double target_x2 = target_xy2[0];
+					double target_y2 = target_xy2[1];
+					coarse_s_traj.push_back(target_s2);
+					coarse_x_traj.push_back(target_x2);
+					coarse_y_traj.push_back(target_y2);
 
 
 					// next s values
