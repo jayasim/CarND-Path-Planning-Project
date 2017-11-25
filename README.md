@@ -48,7 +48,7 @@ The code considered Collision cost, buffer cost, in-lane buffer, efficiency cost
 ## Conclusion
 Attached the screen where you can see the car was able to run without collision for 8.04 miles.
 
-![8.04 miles](./DistanceWithoutAccident)
+![8.04 miles](./DistanceWithoutAccident.png)
 
 ---
 
