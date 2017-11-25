@@ -1,3 +1,19 @@
+# Path Planning Project
+
+This is to design a path planner that is able to create smooth, safe paths for the car to follow along a 3 lane highway with traffic. A successful path planner will be able to keep inside its lane, avoid hitting other cars, and pass slower moving traffic all by using localization, sensor fusion, and map data
+
+## Introduction
+
+The goal of the project is to control the speed, lane, collision of the car in a simulated environment given the waypoints, telemetry and sensor fusion data on the circuit. The car should run with a controlled velocity, acceleration and jerk.
+
+## Implmentation
+
+
+
+## Conclusion
+
+---
+
 # CarND-Path-Planning-Project
 Self-Driving Car Engineer Nanodegree Program
    
